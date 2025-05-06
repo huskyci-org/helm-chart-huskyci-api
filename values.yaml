@@ -1,11 +1,11 @@
 # Default values for huskyci-api
 
 replicaCount: 1
-cluster: "anotaai-security"
-namespace: "sonarqube"
+cluster: "your-cluster"
+namespace: "huskyci-api"
 
 image:
-  repository: huskyciorg/huskyci:latest
+  repository: huskyciorg/huskyci
   pullPolicy: IfNotPresent
   tag: "latest"
 
