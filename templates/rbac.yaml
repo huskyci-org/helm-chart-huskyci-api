@@ -1,0 +1,22 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: huskyci-api-clusterrole
+rules:
+- apiGroups: [""] 
+  resources: ["pods", "pods/log", "services", "endpoints"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: huskyci-api-clusterrolebinding
+subjects:
+- kind: ServiceAccount
+  name: {{ include "huskyci-api.serviceAccountName" . }}
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: ClusterRole 
+  name: huskyci-api-clusterrole
+  apiGroup: rbac.authorization.k8s.io

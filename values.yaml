@@ -1,0 +1,114 @@
+# Default values for huskyci-api
+
+replicaCount: 1
+cluster: "anotaai-security"
+namespace: "sonarqube"
+
+image:
+  repository: igrowdigital/huskyci-api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets:
+  - name: regcred
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Environment variables split into plain values and secret references
+env:
+  - name: HUSKYCI_API_ALLOW_ORIGIN_CORS
+    value: "*"
+  - name: HUSKYCI_API_ENABLE_HTTPS
+    value: "false"
+  - name: HUSKYCI_INFRASTRUCTURE_USE
+    value: "kubernetes"
+  - name: HUSKYCI_KUBERNETES_CONFIG_FILE_PATH
+    value: "/config/kubeconfig"
+
+# Secret-based environment variables moved here
+envFromSecrets:
+  - name: HUSKYCI_API_DEFAULT_PASSWORD
+    secretName: huskyci-api-secrets
+    key: huskyci-api-default-password
+  - name: HUSKYCI_API_DEFAULT_USERNAME
+    secretName: huskyci-api-secrets
+    key: huskyci-api-default-username
+  - name: HUSKYCI_DATABASE_DB_ADDR
+    secretName: huskyci-api-secrets
+    key: huskyci-api-database-db-address
+  - name: HUSKYCI_DATABASE_DB_NAME
+    secretName: huskyci-api-secrets
+    key: huskyci-api-database-db-name
+  - name: HUSKYCI_DATABASE_DB_PASSWORD
+    secretName: huskyci-api-secrets
+    key: huskyci-api-database-db-password
+  - name: HUSKYCI_DATABASE_DB_USERNAME
+    secretName: huskyci-api-secrets
+    key: huskyci-api-database-db-username
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: "huskyci-api-serviceaccount"
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop: [ALL]
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: huskyci-api.k8s.dc.anotaai-security.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts: [chart-example.local]
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe: {}
+#  httpGet:
+#    path: /healthcheck
+#    port: http
+
+readinessProbe: {}
+#  httpGet:
+#    path: /version
+#    port: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
