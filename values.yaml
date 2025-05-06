@@ -5,12 +5,11 @@ cluster: "anotaai-security"
 namespace: "sonarqube"
 
 image:
-  repository: igrowdigital/huskyci-api
+  repository: huskyciorg/huskyci:latest
   pullPolicy: IfNotPresent
   tag: "latest"
 
-imagePullSecrets:
-  - name: regcred
+imagePullSecrets: []
 
 nameOverride: ""
 fullnameOverride: ""
@@ -21,10 +20,25 @@ env:
     value: "*"
   - name: HUSKYCI_API_ENABLE_HTTPS
     value: "false"
+  - name: HUSKYCI_API_PORT
+    value: 80
+  - name: HUSKYCI_API_GIT_SSH_URL
+    value: git@github.com
+  - name: HUSKYCI_API_GIT_URL_TO_SUBSTITUTE
+    value: https://github.com/
   - name: HUSKYCI_INFRASTRUCTURE_USE
     value: "kubernetes"
   - name: HUSKYCI_KUBERNETES_CONFIG_FILE_PATH
     value: "/config/kubeconfig"
+  - name: HUSKYCI_KUBERNETES_NAMESPACE
+    value: "huskyci-api"
+#  - name: HUSKYCI_KUBERNETES_PROXY_ADDRESS
+#    value:
+#  - name: HUSKYCI_KUBERNETES_NO_PROXY_ADDRESSES
+#    value:
+#  - name: HUSKYCI_KUBERNETES_POD_SCHEDULING_TIMEOUT
+#    value:
+
 
 # Secret-based environment variables moved here
 envFromSecrets:
@@ -46,6 +60,9 @@ envFromSecrets:
   - name: HUSKYCI_DATABASE_DB_USERNAME
     secretName: huskyci-api-secrets
     key: huskyci-api-database-db-username
+  - name: HUSKYCI_API_GIT_PRIVATE_SSH_KEY
+    secretName: huskyci-api-secrets
+    key: huskyci-api-git-ssh-private-key
 
 serviceAccount:
   create: true
@@ -70,16 +87,38 @@ service:
   type: ClusterIP
   port: 80
 
-ingress:
-  enabled: true
-  className: ""
-  annotations: {}
-  hosts:
-    - host: huskyci-api.k8s.dc.anotaai-security.com
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
+#ingress:
+#  enabled: true
+#  annotations:
+#    external-dns.alpha.kubernetes.io/hostname: huskyci-api.your-domain.com
+#    alb.ingress.kubernetes.io/backend-protocol: HTTP
+#    alb.ingress.kubernetes.io/conditions.huskyci-api-service: >
+#      [{"field":"path-pattern","pathPatternConfig":{"values":["/*"]}}]
+#    alb.ingress.kubernetes.io/group.name: applications
+#    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+#    alb.ingress.kubernetes.io/scheme: internal
+#    alb.ingress.kubernetes.io/ssl-redirect: "80"
+#    alb.ingress.kubernetes.io/success-codes: 200,404,301,302
+#    alb.ingress.kubernetes.io/target-type: ip
+#  spec:
+#    ingressClassName: alb
+#    rules:
+#      - host: huskyci-api.your-domain.com
+#        http:
+#          paths:
+#            - path: /*
+#              pathType: ImplementationSpecific
+#              backend:
+#                service:
+#                  name: huskyci-api-service
+#                  port:
+#                    number: 80
+#  hosts:
+#    - host: huskyci-api.k8s.dc.anotaai-security.com
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
+#  tls: []
   #  - secretName: chart-example-tls
   #    hosts: [chart-example.local]
 
@@ -91,15 +130,15 @@ resources:
     cpu: 100m
     memory: 128Mi
 
-livenessProbe: {}
-#  httpGet:
-#    path: /healthcheck
-#    port: http
+livenessProbe:
+  httpGet:
+    path: /healthcheck
+    port: http
 
-readinessProbe: {}
-#  httpGet:
-#    path: /version
-#    port: http
+readinessProbe: 
+  httpGet:
+    path: /version
+    port: http
 
 autoscaling:
   enabled: false
