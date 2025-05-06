@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "huskyci-api.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "huskyci-api.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "huskyci-api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "huskyci-api.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+      - name: huskyci-api-init-kubeconfig
+        image: alpine:3.18  # Changed to modern Alpine version
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            CA_CERTIFICATE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt | base64 | tr -d '\n')
+            echo -e "
+            apiVersion: v1
+            kind: Config
+            clusters:
+            - name: {{ .Values.cluster | quote }}
+              cluster:
+                server: https://kubernetes.default.svc  # Fixed server URL
+                certificate-authority-data: ${CA_CERTIFICATE}
+            contexts:
+            - name: default
+              context:
+                cluster: {{ .Values.cluster | quote }}
+                user: {{ .Values.serviceAccount.name | quote }}
+                namespace: $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+            current-context: default
+            users:
+            - name: {{ .Values.serviceAccount.name | quote }}
+              user:
+                token: ${TOKEN}
+            " > /config/kubeconfig
+        volumeMounts:
+          - name: kubeconfig-volume
+            mountPath: /config
+      containers:
+      - name: {{ .Chart.Name }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/bin/sh", "-c", "./huskyci-api-bin"]
+        #command: ["/bin/sh", "-c", "tail -f /dev/null"]
+        env:
+          {{- range .Values.env }}
+          - name: {{ .name }}
+            value: {{ .value | quote }}
+          {{- end }}
+          {{- range .Values.envFromSecrets }}  # Renamed for clarity
+          - name: {{ .name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .secretName }}
+                key: {{ .key }}
+          {{- end }}
+        ports:
+          - name: http
+            containerPort: {{ .Values.service.port }}
+            protocol: TCP
+        {{- with .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.resources }}
+        resources:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        volumeMounts:
+          - name: kubeconfig-volume
+            mountPath: /config
+      volumes:
+        - name: kubeconfig-volume
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
