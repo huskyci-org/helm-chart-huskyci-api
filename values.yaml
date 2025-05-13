@@ -114,7 +114,7 @@ service:
 #                  port:
 #                    number: 80
 #  hosts:
-#    - host: huskyci-api.k8s.dc.anotaai-security.com
+#    - host: huskyci-api.your-domain.com
 #      paths:
 #        - path: /
 #          pathType: ImplementationSpecific
